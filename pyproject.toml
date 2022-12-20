@@ -1,0 +1,49 @@
+[tool.poetry]
+authors = ["Mysterious Ben <datascience@tuta.io>"]
+description = "Basic Streamlit authenticator"
+exclude = ["graphics/*", ".git", ".gitignore", ".venv/", ".mypy_cache/", "__pycache__", ".eggs/"]
+license = "Apache License 2.0"
+name = "stauth"
+readme = "README.md"
+version = "0.1.1"
+
+[tool.poetry.dependencies]
+bcrypt = "^4.0.1"
+extra-streamlit-components = "^0.1.56"
+pyjwt = "^2.6.0"
+python = ">=3.8.1,<3.9.7 || >3.9.7,<4.0"
+streamlit = "^1.16.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
+flake8 = "^6.0.0"
+mypy = "^0.991"
+pylint = "^2.15.8"
+
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool.black]
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.github
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | \notebooks
+    | .ipynb_checkpoints
+    | __pycache__
+    | _build
+    | build
+    | dist
+    | \.venv
+  )/
+)
+'''
+include = '\.pyi?$'
+line_length = 99
+target_version = ['py38']
