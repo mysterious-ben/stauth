@@ -5,7 +5,7 @@ exclude = ["graphics/*", ".git", ".gitignore", ".venv/", ".mypy_cache/", "__pyca
 license = "Apache License 2.0"
 name = "stauth"
 readme = "README.md"
-version = "0.1.1"
+version = "0.1.2"
 
 [tool.poetry.dependencies]
 bcrypt = "^4.0.1"

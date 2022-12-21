@@ -1,10 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple, TypedDict
 
-import jwt
-import bcrypt
-import streamlit as st
 import extra_streamlit_components as stx
+import streamlit as st
+
+from . import util
 
 
 class User(TypedDict):
@@ -62,7 +62,7 @@ class Authenticate:
     def users_as_dict(self) -> Dict[str, User]:
         return {user["username"]: user for user in self.users}
 
-    def _token_encode(self, username: str, exp_timestamp: float) -> str:
+    def _token_encode(self, username: str) -> Tuple[str, datetime]:
         """
         Encodes the contents of the reauthentication cookie.
 
@@ -71,15 +71,15 @@ class Authenticate:
         str
             The JWT cookie for passwordless reauthentication.
         """
-        token = jwt.encode(
-            payload={
-                self.jwt_username_field: username,
-                self.jwt_expiration_field: exp_timestamp,
-            },
-            key=self.cookie_secret_key,
-            algorithm="HS256",
+        expiration = self.users_as_dict[username]["expiration"]
+        return util.encode_jwt_token(
+            username=username,
+            days_to_expiry=self.cookie_expiry_days,
+            expiry_datetime=expiration,
+            secret_key=self.cookie_secret_key,
+            jwt_username_field=self.jwt_username_field,
+            jwt_expiration_field=self.jwt_expiration_field,
         )
-        return token
 
     def _token_decode(self, token: str) -> Dict:
         """
@@ -90,19 +90,7 @@ class Authenticate:
         str
             The decoded JWT cookie for passwordless reauthentication.
         """
-        return jwt.decode(token, self.cookie_secret_key, algorithms=["HS256"])
-
-    def _get_exp_datetime(self, username: str) -> datetime:
-        """
-        Creates the reauthentication cookie's expiry date.
-
-        Returns
-        -------
-        str
-            The JWT cookie's expiry timestamp in Unix epoch.
-        """
-        exp_date = datetime.utcnow() + timedelta(days=self.cookie_expiry_days)
-        return min(exp_date, self.users_as_dict[username]["expiration"])
+        return util.decode_jwt_token(token=token, secret_key=self.cookie_secret_key)
 
     def _check_pw(self, username: str, password: str) -> bool:
         """
@@ -113,10 +101,8 @@ class Authenticate:
         bool
             The validity of the entered password by comparing it to the hashed password on disk.
         """
-        return bcrypt.checkpw(
-            password.encode(),
-            self.users_as_dict[username]["passhash"].encode(),
-        )
+        passhash = self.users_as_dict[username]["passhash"]
+        return util.verify_password(submitted_password=password, expected_hash=passhash)
 
     def _check_cookie_auth(self) -> None:
         """
@@ -128,11 +114,11 @@ class Authenticate:
                 decoded_token = self._token_decode(token)
             except Exception as e:
                 st.exception(e)
+                self.cookie_manager.delete(self.cookie_name)
             else:
                 if (
                     not st.session_state["logout"]
-                    and decoded_token[self.jwt_expiration_field]
-                    > datetime.utcnow().timestamp()
+                    and decoded_token[self.jwt_expiration_field] > datetime.utcnow().timestamp()
                 ):
                     st.session_state["username"] = decoded_token[self.jwt_username_field]
                     st.session_state["authentication_status"] = True
@@ -143,12 +129,11 @@ class Authenticate:
         """
         if (username in self.users_as_dict) and self._check_pw(username, password):
             if self.users_as_dict[username]["expiration"] > datetime.utcnow():
-                exp_datetime = self._get_exp_datetime(username)
-                token = self._token_encode(username, exp_datetime.timestamp())
+                token, token_expiry = self._token_encode(username)
                 self.cookie_manager.set(
                     self.cookie_name,
                     token,
-                    expires_at=exp_datetime,
+                    expires_at=token_expiry,
                 )
                 st.session_state["authentication_status"] = True
             else:
