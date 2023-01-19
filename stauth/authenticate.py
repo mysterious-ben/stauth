@@ -96,18 +96,6 @@ class Authenticate:
         """
         return util.decode_jwt_token(token=token, secret_key=self.cookie_secret_key)
 
-    def _check_pw(self, username: str, password: str) -> bool:
-        """
-        Checks the validity of the entered password.
-
-        Returns
-        -------
-        bool
-            The validity of the entered password by comparing it to the hashed password on disk.
-        """
-        passhash = self._users_as_dict[username]["passhash"]
-        return util.verify_password(submitted_password=password, expected_hash=passhash)
-
     def _check_cookie_auth(self) -> None:
         """
         Checks the validity of the reauthentication cookie.
@@ -131,27 +119,26 @@ class Authenticate:
         """
         Checks the validity of the entered credentials.
         """
-        if (username in self._users_as_dict) and self._check_pw(username, password):
-            if self._users_as_dict[username]["expiration"] < datetime.utcnow():
-                st.warning("Your credentials have expired")
-                st.session_state["authentication_status"] = False
-            elif (
-                self._users_as_dict[username].get("valid_from", datetime.utcnow())
-                > datetime.utcnow()
-            ):
-                st.warning("Your credentials aren't valid yet")
-                st.session_state["authentication_status"] = False
-            else:
-                token, token_expiry = self._token_encode(username)
-                self.cookie_manager.set(
-                    self.cookie_name,
-                    token,
-                    expires_at=token_expiry,
-                )
-                st.session_state["authentication_status"] = True
+        if username not in self._users_as_dict:
+            success, message = False, "Credentials are incorrect"
         else:
-            st.warning("Your credentials are incorrect")
+            success, message = util.verify_password(
+                submitted_password=password,
+                expected_hash=self._users_as_dict[username]["passhash"],
+                expiration=self._users_as_dict[username]["expiration"],
+                valid_from=self._users_as_dict[username].get("valid_from"),
+            )
+        if not success:
+            st.warning(message)
             st.session_state["authentication_status"] = False
+        else:
+            token, token_expiry = self._token_encode(username)
+            self.cookie_manager.set(
+                self.cookie_name,
+                token,
+                expires_at=token_expiry,
+            )
+            st.session_state["authentication_status"] = True
 
     def login(
         self, form_name: str, location: str = "main"

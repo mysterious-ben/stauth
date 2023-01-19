@@ -40,6 +40,21 @@ def decode_jwt_token(token: str, secret_key: str) -> Dict:
     return jwt.decode(token, secret_key, algorithms=["HS256"])
 
 
-def verify_password(submitted_password: str, expected_hash: str) -> bool:
+def verify_password(
+    submitted_password: str,
+    expected_hash: str,
+    expiration: datetime,
+    valid_from: Optional[datetime],
+) -> Tuple[bool, str]:
     """Returns True if the password is correct"""
-    return bcrypt.checkpw(submitted_password.encode(), expected_hash.encode())
+    if valid_from is not None:
+        assert valid_from <= expiration
+    now = datetime.utcnow()
+    if not bcrypt.checkpw(submitted_password.encode(), expected_hash.encode()):
+        return False, "Credentials are incorrect"
+    elif now > expiration:
+        return False, "Credentials have expired"
+    elif (valid_from is not None) and (now < valid_from):
+        return False, "Credentials are not valid yet"
+    else:
+        return True, "Success"
