@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, TypedDict
+from typing_extensions import NotRequired
 
 import extra_streamlit_components as stx
 import streamlit as st
@@ -12,6 +13,7 @@ class User(TypedDict):
     email: str
     passhash: str
     expiration: datetime
+    valid_from: NotRequired[datetime]
 
 
 class Authenticate:
@@ -128,7 +130,16 @@ class Authenticate:
         Checks the validity of the entered credentials.
         """
         if (username in self.users_as_dict) and self._check_pw(username, password):
-            if self.users_as_dict[username]["expiration"] > datetime.utcnow():
+            if self.users_as_dict[username]["expiration"] < datetime.utcnow():
+                st.warning("Your credentials have expired")
+                st.session_state["authentication_status"] = False
+            elif (
+                self.users_as_dict[username].get("valid_from", datetime.utcnow())
+                > datetime.utcnow()
+            ):
+                st.warning("Your credentials aren't valid yet")
+                st.session_state["authentication_status"] = False
+            else:
                 token, token_expiry = self._token_encode(username)
                 self.cookie_manager.set(
                     self.cookie_name,
@@ -136,11 +147,8 @@ class Authenticate:
                     expires_at=token_expiry,
                 )
                 st.session_state["authentication_status"] = True
-            else:
-                st.warning("Username/Password have expired")
-                st.session_state["authentication_status"] = False
         else:
-            st.warning("Username/Password are incorrect")
+            st.warning("Your credentials are incorrect")
             st.session_state["authentication_status"] = False
 
     def login(
