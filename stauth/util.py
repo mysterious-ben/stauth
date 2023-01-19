@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
 
 import bcrypt
@@ -6,7 +6,7 @@ import jwt
 
 
 def _get_jwt_expiry(days_to_expiry: int, expiry_datetime: Optional[datetime]) -> datetime:
-    expiry = datetime.utcnow() + timedelta(days=days_to_expiry)
+    expiry = datetime.now(tz=timezone.utc) + timedelta(days=days_to_expiry)
     if expiry_datetime is None:
         return expiry
     else:
@@ -49,7 +49,7 @@ def verify_password(
     """Returns True if the password is correct"""
     if valid_from is not None:
         assert valid_from <= expiration
-    now = datetime.utcnow()
+    now = datetime.now(tz=timezone.utc)
     if not bcrypt.checkpw(submitted_password.encode(), expected_hash.encode()):
         return False, "Credentials are incorrect"
     elif now > expiration:

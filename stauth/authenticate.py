@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, TypedDict
 from typing_extensions import NotRequired
 
@@ -108,9 +108,9 @@ class Authenticate:
                 st.exception(e)
                 self.cookie_manager.delete(self.cookie_name)
             else:
-                if (
-                    not st.session_state["logout"]
-                    and decoded_token[self.jwt_expiration_field] > datetime.utcnow().timestamp()
+                if not st.session_state["logout"] and (
+                    decoded_token[self.jwt_expiration_field]
+                    > datetime.now(tz=timezone.utc).timestamp()
                 ):
                     st.session_state["username"] = decoded_token[self.jwt_username_field]
                     st.session_state["authentication_status"] = True
