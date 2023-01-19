@@ -45,7 +45,7 @@ class Authenticate:
         cookie_expiry_days: int
             The number of days before the cookie expires on the client's browser.
         """
-        self.users = users
+        self._users = users
         self.cookie_name = cookie_name
         self.cookie_secret_key = cookie_secret_key
         self.cookie_expiry_days = cookie_expiry_days
@@ -60,9 +60,11 @@ class Authenticate:
         if "logout" not in st.session_state:
             st.session_state["logout"] = None
 
-    @property
-    def users_as_dict(self) -> Dict[str, User]:
-        return {user["username"]: user for user in self.users}
+        self._users_as_dict: Dict[str, User] = {user["username"]: user for user in self._users}
+
+    # @property
+    # def _users_as_dict(self) -> Dict[str, User]:
+    #     return {user["username"]: user for user in self._users}
 
     def _token_encode(self, username: str) -> Tuple[str, datetime]:
         """
@@ -73,7 +75,7 @@ class Authenticate:
         str
             The JWT cookie for passwordless reauthentication.
         """
-        expiration = self.users_as_dict[username]["expiration"]
+        expiration = self._users_as_dict[username]["expiration"]
         return util.encode_jwt_token(
             username=username,
             days_to_expiry=self.cookie_expiry_days,
@@ -103,7 +105,7 @@ class Authenticate:
         bool
             The validity of the entered password by comparing it to the hashed password on disk.
         """
-        passhash = self.users_as_dict[username]["passhash"]
+        passhash = self._users_as_dict[username]["passhash"]
         return util.verify_password(submitted_password=password, expected_hash=passhash)
 
     def _check_cookie_auth(self) -> None:
@@ -129,12 +131,12 @@ class Authenticate:
         """
         Checks the validity of the entered credentials.
         """
-        if (username in self.users_as_dict) and self._check_pw(username, password):
-            if self.users_as_dict[username]["expiration"] < datetime.utcnow():
+        if (username in self._users_as_dict) and self._check_pw(username, password):
+            if self._users_as_dict[username]["expiration"] < datetime.utcnow():
                 st.warning("Your credentials have expired")
                 st.session_state["authentication_status"] = False
             elif (
-                self.users_as_dict[username].get("valid_from", datetime.utcnow())
+                self._users_as_dict[username].get("valid_from", datetime.utcnow())
                 > datetime.utcnow()
             ):
                 st.warning("Your credentials aren't valid yet")
@@ -191,7 +193,9 @@ class Authenticate:
 
         username = st.session_state["username"]
         expiration = (
-            self.users_as_dict[username]["expiration"] if username in self.users_as_dict else None
+            self._users_as_dict[username]["expiration"]
+            if username in self._users_as_dict
+            else None
         )
         return (
             st.session_state["authentication_status"],
