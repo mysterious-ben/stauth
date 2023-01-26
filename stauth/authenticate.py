@@ -145,6 +145,7 @@ class Authenticate:
         form_name: str,
         location: str = "main",
         checkbox_labels: Optional[List[str]] = None,
+        markdown_texts: Optional[List[str]] = None,
     ) -> Tuple[bool, str, Optional[datetime]]:
         """
         Creates a login widget.
@@ -181,6 +182,9 @@ class Authenticate:
                     checkboxes = []
                     for checkbox_label in checkbox_labels:
                         checkboxes.append(login_form.checkbox(checkbox_label))
+                if markdown_texts is not None:
+                    for markdown_text in markdown_texts:
+                        login_form.markdown(markdown_text)
                 if login_form.form_submit_button("Login") and all(checkboxes):
                     st.session_state["username"] = username
                     self._check_pw_auth(username, password)

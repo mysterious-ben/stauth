@@ -38,10 +38,11 @@ st.title("The Streamlit App")
 authentication_status, username, expiration = authenticator.login(
     "Login",
     "main",
-    [
-        "I accept the terms and conditions",
+    checkbox_labels=[
+        "I accept Terms and Conditions*",
         "I accept that this website uses functional cookies",
     ],
+    markdown_texts=["Trademark Green Outer Space TM"]
 )
 if authentication_status is True:
     assert expiration is not None
