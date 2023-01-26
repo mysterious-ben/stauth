@@ -141,7 +141,10 @@ class Authenticate:
             st.session_state["authentication_status"] = True
 
     def login(
-        self, form_name: str, location: str = "main"
+        self,
+        form_name: str,
+        location: str = "main",
+        checkbox_labels: Optional[List[str]] = None,
     ) -> Tuple[bool, str, Optional[datetime]]:
         """
         Creates a login widget.
@@ -174,7 +177,11 @@ class Authenticate:
                 login_form.subheader(form_name)
                 username = login_form.text_input("Username").lower()
                 password = login_form.text_input("Password", type="password")
-                if login_form.form_submit_button("Login"):
+                if checkbox_labels is not None:
+                    checkboxes = []
+                    for checkbox_label in checkbox_labels:
+                        checkboxes.append(login_form.checkbox(checkbox_label))
+                if login_form.form_submit_button("Login") and all(checkboxes):
                     st.session_state["username"] = username
                     self._check_pw_auth(username, password)
 

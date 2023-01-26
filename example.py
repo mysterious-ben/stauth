@@ -35,7 +35,14 @@ authenticator = Authenticate(
 
 
 st.title("The Streamlit App")
-authentication_status, username, expiration = authenticator.login("Login", "main")
+authentication_status, username, expiration = authenticator.login(
+    "Login",
+    "main",
+    [
+        "I accept the terms and conditions",
+        "I accept that this website uses functional cookies",
+    ],
+)
 if authentication_status is True:
     assert expiration is not None
     st.markdown(f"Success! Logged in as '{username}'.")
