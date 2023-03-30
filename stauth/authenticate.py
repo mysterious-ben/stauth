@@ -108,7 +108,10 @@ class Authenticate:
                 st.exception(e)
                 self.cookie_manager.delete(self.cookie_name)
             else:
-                if not st.session_state["logout"] and (
+                if decoded_token[self.jwt_username_field] not in self._users_as_dict:
+                    st.warning("Incorrect username in the cookie")
+                    self.cookie_manager.delete(self.cookie_name)
+                elif not st.session_state["logout"] and (
                     decoded_token[self.jwt_expiration_field]
                     > datetime.now(tz=timezone.utc).timestamp()
                 ):
@@ -167,7 +170,10 @@ class Authenticate:
             Username of the authenticated user.
         """
         if not st.session_state["authentication_status"]:
+            # Check a login cookie; if it exists - authorize
             self._check_cookie_auth()
+
+            # If no correct login cookie found
             if not st.session_state["authentication_status"]:
                 if location == "main":
                     login_form = st.form("Login")
@@ -185,6 +191,8 @@ class Authenticate:
                 if markdown_texts is not None:
                     for markdown_text in markdown_texts:
                         login_form.markdown(markdown_text)
+
+                # Check entered username and password; if it exists - authorize
                 if login_form.form_submit_button("Login") and all(checkboxes):
                     st.session_state["username"] = username
                     self._check_pw_auth(username, password)
@@ -192,7 +200,7 @@ class Authenticate:
         username = st.session_state["username"]
         expiration = (
             self._users_as_dict[username]["expiration"]
-            if username in self._users_as_dict
+            if st.session_state["authentication_status"]
             else None
         )
         return (
