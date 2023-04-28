@@ -193,9 +193,13 @@ class Authenticate:
                         login_form.markdown(markdown_text)
 
                 # Check entered username and password; if it exists - authorize
-                if login_form.form_submit_button("Login") and all(checkboxes):
-                    st.session_state["username"] = username
-                    self._check_pw_auth(username, password)
+                if login_form.form_submit_button("Login"):
+                    if all(checkboxes):
+                        st.session_state["username"] = username
+                        self._check_pw_auth(username, password)
+                    else:
+                        st.warning("Please accept the terms and conditions")
+                        st.session_state["authentication_status"] = False
 
         username = st.session_state["username"]
         expiration = (

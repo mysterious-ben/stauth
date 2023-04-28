@@ -1,6 +1,6 @@
-import bcrypt
 from datetime import datetime, timezone
 
+import bcrypt
 import streamlit as st
 
 from stauth.authenticate import Authenticate
@@ -25,6 +25,10 @@ users = [
     },
 ]
 
+st.session_state["session_run"] = st.session_state.get("session_run", 0) + 1
+session_run = st.session_state["session_run"]
+
+print(f"rendering started {session_run=}")
 
 authenticator = Authenticate(
     users=users,  # type: ignore
@@ -32,7 +36,7 @@ authenticator = Authenticate(
     cookie_secret_key="hereisverysercretkey",
     cookie_expiry_days=5,
 )
-
+print(f"authenticator created {session_run=}")
 
 st.title("The Streamlit App")
 authentication_status, username, expiration = authenticator.login(
@@ -44,10 +48,16 @@ authentication_status, username, expiration = authenticator.login(
     ],
     markdown_texts=["Trademark Green Outer Space TM"]
 )
+print(f"login rendered {session_run=}")
+
 if authentication_status is True:
+    print(f"authorized {session_run=}")
     assert expiration is not None
     st.markdown(f"Success! Logged in as '{username}'.")
     st.markdown(f"The credentials will expire on '{expiration.isoformat()}'.")
     authenticator.logout("Logout")
+    print(f"logout rendered {session_run=}")
 else:
     pass
+
+print(f"page rendered: {username=} {authentication_status=} {expiration=} {session_run=}")
