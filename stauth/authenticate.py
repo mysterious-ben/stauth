@@ -102,7 +102,9 @@ class Authenticate:
         """
         token = self.cookie_manager.get(self.cookie_name)
 
-        st.session_state["cookie_auth_response_count"] = st.session_state.get("cookie_auth_response_count", 0) + 1
+        st.session_state["cookie_auth_response_count"] = (
+            st.session_state.get("cookie_auth_response_count", 0) + 1
+        )
 
         if token is not None:
             try:
@@ -150,42 +152,14 @@ class Authenticate:
             )
             st.session_state["authentication_status"] = True
 
-    def is_cookie_auth_done(self) -> bool:
+    def _is_cookie_auth_done(self) -> bool:
         """
-            Returns the bool value of 'is_cookie_auth_done' in st.session_state
+        Returns the bool value of 'is_cookie_auth_done' in st.session_state
         """
         return st.session_state.get("is_cookie_auth_done", False)
-    
-    def loading_view(self) -> Tuple[bool, str, Optional[datetime]]:
-        """
-        Starts cookie auth process and creates a temporary loading view, which disappears when the cookie auth process is done.
 
-        Returns
-        -------
-        str
-            Name of the authenticated user.
-        bool
-            The status of authentication, None: no credentials entered,
-            False: incorrect credentials, True: correct credentials.
-        str
-            Username of the authenticated user.
-        """
-        if not st.session_state["authentication_status"]:
-            self._check_cookie_auth()
-            if not self.is_cookie_auth_done():
-                st.write("Loading...")
-
-        username = st.session_state["username"]
-        expiration = (
-            self._users_as_dict[username]["expiration"]
-            if st.session_state["authentication_status"]
-            else None
-        )
-        return (
-            st.session_state["authentication_status"],
-            username,
-            expiration,
-        )
+    def _is_authenticated(self) -> bool:
+        return st.session_state.get("authentication_status", False)
 
     def login(
         self,
@@ -213,40 +187,53 @@ class Authenticate:
         str
             Username of the authenticated user.
         """
-        if location == "main":
-            login_form = st.form("Login")
-        elif location == "sidebar":
-            login_form = st.sidebar.form("Login")
-        else:
-            raise ValueError("Location must be one of 'main' or 'sidebar'")
-        login_form.subheader(form_name)
-        username = login_form.text_input("Username").lower()
-        password = login_form.text_input("Password", type="password")
-        if checkbox_labels is not None:
-            checkboxes = []
-            for checkbox_label in checkbox_labels:
-                checkboxes.append(login_form.checkbox(checkbox_label))
-        if markdown_texts is not None:
-            for markdown_text in markdown_texts:
-                login_form.markdown(markdown_text)
 
-        # Check entered username and password; if it exists - authorize
-        if login_form.form_submit_button("Login"):
-            if all(checkboxes):
-                st.session_state["username"] = username
-                self._check_pw_auth(username, password)
-            else:
-                st.warning("Please accept the terms and conditions")
-                st.session_state["authentication_status"] = False
+        if not self._is_authenticated():
+            # If not authenticated, check the cookie; if the authentication cookie exists,
+            # authenticate the user
+            self._check_cookie_auth()
+            if not self._is_cookie_auth_done():
+                # If the cookie is still loading, show a loading view
+                st.write("Loading...")
+            elif not self._is_authenticated():
+                # If the cookie is done loading but the user is not authenticated,
+                # show the login form
+                if location == "main":
+                    login_form = st.form("Login")
+                elif location == "sidebar":
+                    login_form = st.sidebar.form("Login")
+                else:
+                    raise ValueError("Location must be one of 'main' or 'sidebar'")
+                login_form.subheader(form_name)
+                username = login_form.text_input("Username").lower()
+                password = login_form.text_input("Password", type="password")
+                if checkbox_labels is not None:
+                    checkboxes = []
+                    for checkbox_label in checkbox_labels:
+                        checkboxes.append(login_form.checkbox(checkbox_label))
+                if markdown_texts is not None:
+                    for markdown_text in markdown_texts:
+                        login_form.markdown(markdown_text)
 
+                # Check submitted username and password
+                if login_form.form_submit_button("Login"):
+                    # The user must accept all the terms and conditions,
+                    if all(checkboxes):
+                        st.session_state["username"] = username
+                        # If the submitted credentials are correct, authenticate the user
+                        self._check_pw_auth(username, password)
+                    else:
+                        st.warning("Please accept the terms and conditions")
+                        st.session_state["authentication_status"] = False
+
+        # When authentication process is done, authentication status and username
+        # are stored in the session state
         username = st.session_state["username"]
         expiration = (
-            self._users_as_dict[username]["expiration"]
-            if st.session_state["authentication_status"]
-            else None
+            self._users_as_dict[username]["expiration"] if self._is_authenticated() else None
         )
         return (
-            st.session_state["authentication_status"],
+            self._is_authenticated(),
             username,
             expiration,
         )
