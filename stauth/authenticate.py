@@ -101,6 +101,11 @@ class Authenticate:
         Checks the validity of the reauthentication cookie.
         """
         token = self.cookie_manager.get(self.cookie_name)
+
+        st.session_state["cookie_auth_response_count"] = (
+            st.session_state.get("cookie_auth_response_count", 0) + 1
+        )
+
         if token is not None:
             try:
                 decoded_token = self._token_decode(token)
@@ -117,6 +122,10 @@ class Authenticate:
                 ):
                     st.session_state["username"] = decoded_token[self.jwt_username_field]
                     st.session_state["authentication_status"] = True
+            st.session_state["is_cookie_auth_done"] = True
+        else:
+            if st.session_state["cookie_auth_response_count"] > 1:
+                st.session_state["is_cookie_auth_done"] = True
 
     def _check_pw_auth(self, username: str, password: str) -> None:
         """
@@ -142,6 +151,15 @@ class Authenticate:
                 expires_at=token_expiry,
             )
             st.session_state["authentication_status"] = True
+
+    def _is_cookie_auth_done(self) -> bool:
+        """
+        Returns the bool value of 'is_cookie_auth_done' in st.session_state
+        """
+        return st.session_state.get("is_cookie_auth_done", False)
+
+    def _is_authenticated(self) -> bool:
+        return st.session_state.get("authentication_status", False)
 
     def login(
         self,
@@ -169,12 +187,17 @@ class Authenticate:
         str
             Username of the authenticated user.
         """
-        if not st.session_state["authentication_status"]:
-            # Check a login cookie; if it exists - authorize
-            self._check_cookie_auth()
 
-            # If no correct login cookie found
-            if not st.session_state["authentication_status"]:
+        if not self._is_authenticated():
+            # If not authenticated, check the cookie; if the authentication cookie exists,
+            # authenticate the user
+            self._check_cookie_auth()
+            if not self._is_cookie_auth_done():
+                # If the cookie is still loading, show a loading view
+                st.write("Loading...")
+            elif not self._is_authenticated():
+                # If the cookie is done loading but the user is not authenticated,
+                # show the login form
                 if location == "main":
                     login_form = st.form("Login")
                 elif location == "sidebar":
@@ -192,23 +215,25 @@ class Authenticate:
                     for markdown_text in markdown_texts:
                         login_form.markdown(markdown_text)
 
-                # Check entered username and password; if it exists - authorize
+                # Check submitted username and password
                 if login_form.form_submit_button("Login"):
+                    # The user must accept all the terms and conditions,
                     if all(checkboxes):
                         st.session_state["username"] = username
+                        # If the submitted credentials are correct, authenticate the user
                         self._check_pw_auth(username, password)
                     else:
                         st.warning("Please accept the terms and conditions")
                         st.session_state["authentication_status"] = False
 
+        # When authentication process is done, authentication status and username
+        # are stored in the session state
         username = st.session_state["username"]
         expiration = (
-            self._users_as_dict[username]["expiration"]
-            if st.session_state["authentication_status"]
-            else None
+            self._users_as_dict[username]["expiration"] if self._is_authenticated() else None
         )
         return (
-            st.session_state["authentication_status"],
+            self._is_authenticated(),
             username,
             expiration,
         )

@@ -39,6 +39,7 @@ authenticator = Authenticate(
 print(f"authenticator created {session_run=}")
 
 st.title("The Streamlit App")
+
 authentication_status, username, expiration = authenticator.login(
     "Login",
     "main",
@@ -46,11 +47,11 @@ authentication_status, username, expiration = authenticator.login(
         "I accept Terms and Conditions*",
         "I accept that this website uses functional cookies",
     ],
-    markdown_texts=["Trademark Green Outer Space TM"]
+    markdown_texts=["Trademark Green Outer Space TM"],
 )
 print(f"login rendered {session_run=}")
 
-if authentication_status is True:
+if authentication_status:
     print(f"authorized {session_run=}")
     assert expiration is not None
     st.markdown(f"Success! Logged in as '{username}'.")
