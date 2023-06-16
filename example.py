@@ -51,14 +51,19 @@ authentication_status, username, expiration = authenticator.login(
 )
 print(f"login rendered {session_run=}")
 
-if authentication_status:
-    print(f"authorized {session_run=}")
-    assert expiration is not None
-    st.markdown(f"Success! Logged in as '{username}'.")
-    st.markdown(f"The credentials will expire on '{expiration.isoformat()}'.")
-    authenticator.logout("Logout")
-    print(f"logout rendered {session_run=}")
+if authentication_status is None:
+    print(f"cookie is still loading {session_run=}")
 else:
-    pass
+    if authentication_status:
+        print(f"authorized {session_run=}")
+        assert expiration is not None
+        st.markdown(f"Success! Logged in as '{username}'.")
+        st.markdown(f"The credentials will expire on '{expiration.isoformat()}'.")
+        authenticator.logout("Logout")
+        print(f"logout rendered {session_run=}")
+    else:
+        pass
+    st.markdown("")
+    st.markdown("This login form is provided by Mysterious Ben")
 
 print(f"page rendered: {username=} {authentication_status=} {expiration=} {session_run=}")

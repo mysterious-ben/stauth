@@ -232,6 +232,8 @@ class Authenticate:
                     else:
                         st.warning("Please accept the terms and conditions")
                         st.session_state["authentication_status"] = False
+                else:
+                    st.session_state["authentication_status"] = False
 
         # When authentication process is done, authentication status and username
         # are stored in the session state
