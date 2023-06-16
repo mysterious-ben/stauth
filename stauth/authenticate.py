@@ -154,12 +154,17 @@ class Authenticate:
 
     def _is_cookie_auth_done(self) -> bool:
         """
-        Returns the bool value of 'is_cookie_auth_done' in st.session_state
+        Returns true if the authentication cookie has been loaded.
         """
         return st.session_state.get("is_cookie_auth_done", False)
 
-    def _is_authenticated(self) -> bool:
-        return st.session_state.get("authentication_status", False)
+    def _is_authenticated(self) -> Optional[bool]:
+        """
+        Returns true if the user is authenticated, false otherwise.
+        Returns None if the authentication cookie is still loading.
+        """
+
+        return st.session_state.get("authentication_status", None)
 
     def login(
         self,
@@ -167,7 +172,7 @@ class Authenticate:
         location: str = "main",
         checkbox_labels: Optional[List[str]] = None,
         markdown_texts: Optional[List[str]] = None,
-    ) -> Tuple[bool, str, Optional[datetime]]:
+    ) -> Tuple[Optional[bool], str, Optional[datetime]]:
         """
         Creates a login widget.
 
@@ -182,8 +187,10 @@ class Authenticate:
         str
             Name of the authenticated user.
         bool
-            The status of authentication, None: no credentials entered,
-            False: incorrect credentials, True: correct credentials.
+            The status of authentication:
+                True - the user is authenticated
+                False - incorrect / no credentials or cookie provided
+                None - the authentication cookie is still loading
         str
             Username of the authenticated user.
         """
